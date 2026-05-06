@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de Atendimento — Anima Missões</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1e1e1e;
+    --accent: #e8ff00;
+    --accent2: #ff4444;
+    --text: #f0f0f0;
+    --muted: #666;
+    --card: #141414;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inconsolata', monospace;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 6rem 4rem 5rem;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-bg-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(120px, 20vw, 260px);
+    font-weight: 800;
+    color: transparent;
+    -webkit-text-stroke: 1px #1a1a1a;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.04em;
+  }
+
+  .hero-tag {
+    font-family: 'Inconsolata', monospace;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 0.35em 0.8em;
+    display: inline-block;
+    margin-bottom: 2rem;
+    width: fit-content;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 6rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    max-width: 900px;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+
+  .hero-title span {
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    margin-top: 2rem;
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 600px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .hero-verdict {
+    margin-top: 3rem;
+    padding: 1.5rem 2rem;
+    border-left: 3px solid var(--accent2);
+    background: rgba(255,68,68,0.05);
+    max-width: 700px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .hero-verdict p {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .hero-verdict .label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    padding: 2.5rem 2rem;
+    border-right: 1px solid var(--border);
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* SECTION */
+  section {
+    padding: 5rem 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .section-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* PROBLEMS GRID */
+  .problems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .problem-card {
+    background: var(--card);
+    padding: 2rem;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .problem-card:hover {
+    background: #181818;
+  }
+
+  .problem-card::before {
+    content: attr(data-num);
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 4rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1;
+  }
+
+  .problem-severity {
+    display: inline-block;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.25em 0.7em;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  .severity-critical {
+    background: rgba(255,68,68,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(255,68,68,0.3);
+  }
+
+  .severity-high {
+    background: rgba(255,160,0,0.12);
+    color: #ffaa00;
+    border: 1px solid rgba(255,160,0,0.25);
+  }
+
+  .severity-medium {
+    background: rgba(232,255,0,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(232,255,0,0.2);
+  }
+
+  .problem-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
+  }
+
+  .problem-desc {
+    font-size: 0.9rem;
+    color: #999;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .problem-effect {
+    font-size: 0.82rem;
+    color: var(--accent2);
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .problem-effect::before {
+    content: '→ ';
+    opacity: 0.6;
+  }
+
+  /* QUOTE BLOCK */
+  .quote-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  .quote-side {
+    padding: 2rem;
+    background: var(--card);
+  }
+
+  .quote-side .qlabel {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding: 0.3em 0.7em;
+    display: inline-block;
+  }
+
+  .qlabel-bad {
+    color: var(--accent2);
+    border: 1px solid rgba(255,68,68,0.3);
+    background: rgba(255,68,68,0.08);
+  }
+
+  .qlabel-good {
+    color: #4ade80;
+    border: 1px solid rgba(74,222,128,0.3);
+    background: rgba(74,222,128,0.08);
+  }
+
+  .quote-text {
+    font-size: 0.95rem;
+    color: #ccc;
+    font-style: italic;
+    line-height: 1.7;
+  }
+
+  /* FUNNEL */
+  .funnel {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .funnel-step:hover { border-color: #333; }
+
+  .funnel-step.broken {
+    border-left: 3px solid var(--accent2);
+    background: rgba(255,68,68,0.04);
+  }
+
+  .funnel-step.broken::after {
+    content: 'QUEBRADO';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    color: var(--accent2);
+    opacity: 0.7;
+  }
+
+  .funnel-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .funnel-text { font-size: 0.9rem; color: #bbb; }
+  .funnel-text strong { color: #fff; font-family: 'Syne', sans-serif; font-size: 0.95rem; }
+
+  .funnel-arrow {
+    text-align: center;
+    color: #2a2a2a;
+    font-size: 1.2rem;
+    margin: -1px 0;
+    padding: 0.25rem;
+    background: var(--bg);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* DIAGNOSIS */
+  .diagnosis-box {
+    border: 1px solid var(--accent);
+    padding: 3rem;
+    background: rgba(232,255,0,0.02);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .diagnosis-box::before {
+    content: 'DIAGNÓSTICO';
+    position: absolute;
+    top: -1px;
+    left: 3rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    background: var(--accent);
+    color: #000;
+    padding: 0.3em 0.8em;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+  }
+
+  .diagnosis-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 1.5rem;
+  }
+
+  .diagnosis-title span { color: var(--accent); }
+
+  .diagnosis-text {
+    font-size: 1rem;
+    color: #aaa;
+    max-width: 700px;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+  }
+
+  .diagnosis-final {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent2);
+    padding: 1.5rem;
+    border: 1px solid rgba(255,68,68,0.25);
+    background: rgba(255,68,68,0.05);
+    display: inline-block;
+  }
+
+  /* CHECKLIST */
+  .checklist {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    color: #aaa;
+    padding: 1rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .checklist li::before {
+    content: '✕';
+    color: var(--accent2);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    margin-top: 0.1em;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 3rem 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+  }
+
+  footer p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  footer strong { color: var(--accent); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .hero { padding: 5rem 1.5rem 3rem; }
+    section { padding: 3rem 1.5rem; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .stat { border-right: none; border-bottom: 1px solid var(--border); }
+    .problems-grid { grid-template-columns: 1fr; }
+    .quote-block { grid-template-columns: 1fr; }
+    .checklist { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; }
+    .diagnosis-box { padding: 2rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-bg-text">FALHA</div>
+  <div class="hero-tag">Análise de Atendimento Comercial</div>
+  <h1 class="hero-title">
+    Anima Missões<br>
+    <span>12 falhas que estão matando</span><br>
+    sua conversão
+  </h1>
+  <p class="hero-sub">
+    Diagnóstico completo do atendimento via WhatsApp. Baseado em conversas reais, padrões repetidos e perdas identificáveis.
+  </p>
+  <div class="hero-verdict">
+    <p class="label">Veredicto</p>
+    <p>Ele atende como informativo institucional, quando deveria atender como vendedor.</p>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-number">12</div>
+    <div class="stat-label">Falhas identificadas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number">0</div>
+    <div class="stat-label">CTAs diretos encontrados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number">0</div>
+    <div class="stat-label">Propostas com preço</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number">↓</div>
+    <div class="stat-label">Taxa de conversão estimada</div>
+  </div>
+</div>
+
+<!-- PROBLEMS -->
+<section>
+  <div class="section-header fade-in">
+    <span class="section-num">01 — Problemas</span>
+    <h2 class="section-title">Onde o atendimento quebra</h2>
+  </div>
+
+  <div class="problems-grid">
+
+    <div class="problem-card fade-in" data-num="01">
+      <span class="problem-severity severity-high">Alto impacto</span>
+      <h3 class="problem-title">Resposta inicial fria e passiva</h3>
+      <p class="problem-desc">
+        "Anima Missões agradece seu contato. Como podemos ajudar?" — genérico, sem direção, devolve a fricção pro cliente. O lead veio com intenção. Você reage em vez de conduzir.
+      </p>
+      <p class="problem-effect">O cliente precisa fazer o trabalho que deveria ser seu.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="02">
+      <span class="problem-severity severity-medium">Médio impacto</span>
+      <h3 class="problem-title">Repetição robótica de apresentação</h3>
+      <p class="problem-desc">
+        "Olá, tudo bem? Me chamo Robson… vou lhe auxiliar…" mesmo depois do cliente já ter explicado o que quer. Ignora o contexto. Parece script automático.
+      </p>
+      <p class="problem-effect">Aumenta o tempo até o ponto. Gera abandono silencioso.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="03">
+      <span class="problem-severity severity-critical">Crítico</span>
+      <h3 class="problem-title">Ignora a intenção direta do cliente</h3>
+      <p class="problem-desc">
+        Cliente: "Você pode me informar sobre eventos futuros?" Resposta: apresentação institucional genérica. A pergunta objetiva recebe texto que não responde nada.
+      </p>
+      <p class="problem-effect">Cliente sente que não foi ouvido e desiste.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="04">
+      <span class="problem-severity severity-critical">Crítico</span>
+      <h3 class="problem-title">Falta de preço ou demora absurda pra chegar nele</h3>
+      <p class="problem-desc">
+        Turismo é altamente sensível a preço. Cliente pergunta valor e recebe texto longo + mais perguntas. Sem referência de preço, o cliente sai e pesquisa no concorrente.
+      </p>
+      <p class="problem-effect">Regra simples: sem faixa de preço = baixa conversão.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="05">
+      <span class="problem-severity severity-high">Alto impacto</span>
+      <h3 class="problem-title">Blocos de texto gigantes</h3>
+      <p class="problem-desc">
+        "Não se trata de excursão… formas de deslocamento… avião… ônibus… transfer…" — parágrafo enorme com informação irrelevante naquele momento. Ninguém lê.
+      </p>
+      <p class="problem-effect">Você explica antes de vender. Cansa antes de despertar interesse.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="06">
+      <span class="problem-severity severity-high">Alto impacto</span>
+      <h3 class="problem-title">Formulário disfarçado de conversa</h3>
+      <p class="problem-desc">
+        Manda 4 perguntas seguidas (data, cidade, transporte, quantidade) antes de gerar qualquer valor. Isso é qualificar sem razão para o cliente continuar.
+      </p>
+      <p class="problem-effect">A ordem correta: interesse → opção → preço → qualificação.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="07">
+      <span class="problem-severity severity-critical">Crítico</span>
+      <h3 class="problem-title">Zero criação de desejo</h3>
+      <p class="problem-desc">
+        Nenhuma emoção. Sem experiência, diferencial, imagem mental ou exclusividade. Só "roteiros", "ajustamos", "flexível". Turismo não se vende com palavras vazias.
+      </p>
+      <p class="problem-effect">Vende comoditização, não experiência. Preço vira o único critério.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="08">
+      <span class="problem-severity severity-critical">Crítico</span>
+      <h3 class="problem-title">Falta de oferta concreta</h3>
+      <p class="problem-desc">
+        Nenhum momento com: "Roteiro de 1 dia com visita guiada + espetáculo — R$ X por pessoa." O cliente não consegue visualizar o que está comprando, então não decide.
+      </p>
+      <p class="problem-effect">Sem produto definido, a venda não acontece.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="09">
+      <span class="problem-severity severity-high">Alto impacto</span>
+      <h3 class="problem-title">Follow-up que não é follow-up</h3>
+      <p class="problem-desc">
+        "Boa tarde, tudo bem?" como retomada de contato. Sem contexto, sem proposta, sem gatilho. Isso é ruído no WhatsApp do cliente — não é reativação de interesse.
+      </p>
+      <p class="problem-effect">Oportunidade perdida de retomar onde o cliente parou.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="10">
+      <span class="problem-severity severity-medium">Médio impacto</span>
+      <h3 class="problem-title">Linguagem que transmite insegurança</h3>
+      <p class="problem-desc">
+        "Nos ajustamos totalmente" passa ausência de produto definido e falta de posicionamento. O cliente lê isso como: "não sei exatamente o que estão vendendo."
+      </p>
+      <p class="problem-effect">Flexibilidade sem estrutura parece falta de profissionalismo.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="11">
+      <span class="problem-severity severity-medium">Médio impacto</span>
+      <h3 class="problem-title">Sem pré-qualificação real</h3>
+      <p class="problem-desc">
+        Reclama de "muitos curiosos" mas não ancora preço, não define perfil de cliente ideal, não cria filtros naturais na conversa. Todo mundo vira curioso porque você permite.
+      </p>
+      <p class="problem-effect">O problema não é o lead. É a ausência de filtro.</p>
+    </div>
+
+    <div class="problem-card fade-in" data-num="12">
+      <span class="problem-severity severity-critical">Crítico</span>
+      <h3 class="problem-title">Nenhuma conversa conduz ao fechamento</h3>
+      <p class="problem-desc">
+        Em nenhuma conversa existe proposta clara, resumo de oferta ou CTA direto. Exemplo do que deveria existir: "Para 2 pessoas, esse roteiro fica em R$X. Posso reservar para você nessa data?"
+      </p>
+      <p class="problem-effect">A conversa simplesmente acaba sem direção. Venda não acontece.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ANTES / DEPOIS -->
+<section>
+  <div class="section-header fade-in">
+    <span class="section-num">02 — Comparativo</span>
+    <h2 class="section-title">Como está vs. como deveria ser</h2>
+  </div>
+
+  <div class="quote-block fade-in">
+    <div class="quote-side">
+      <span class="qlabel qlabel-bad">Como está hoje</span>
+      <p class="quote-text">
+        "Anima Missões agradece seu contato. Como podemos ajudar?"<br><br>
+        "Olá, tudo bem? Me chamo Robson, sou agente de turismo aqui da Anima Missões e vou lhe auxiliar. Somos uma agência especializada... nos ajustamos totalmente... qualquer forma de deslocamento, avião, ônibus, transfer..."<br><br>
+        [cliente pergunta preço]<br><br>
+        "Pra montar a proposta ideal, preciso saber: qual a data? De qual cidade? Como prefere viajar? Quantas pessoas?"
+      </p>
+    </div>
+    <div class="quote-side">
+      <span class="qlabel qlabel-good">Como deveria ser</span>
+      <p class="quote-text">
+        "Oi! Aqui é a Anima Missões. Você está pensando em vir pra São Miguel das Missões?"<br><br>
+        [cliente confirma interesse]<br><br>
+        "Temos um roteiro de 1 dia completo — visita às ruínas da manhã com guia especializado + Espetáculo Som e Luz à noite. Fica em R$ 180 por pessoa com transporte incluído.<br><br>
+        Você vem de onde? Consigo te dar uma proposta fechada em 5 minutos."
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- FUNIL QUEBRADO -->
+<section>
+  <div class="section-header fade-in">
+    <span class="section-num">03 — Funil</span>
+    <h2 class="section-title">Onde o cliente some</h2>
+  </div>
+
+  <div class="funnel fade-in">
+    <div class="funnel-step">
+      <div class="funnel-icon">📲</div>
+      <div class="funnel-text"><strong>Lead entra em contato</strong><br>Veio com intenção de compra</div>
+    </div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-step broken">
+      <div class="funnel-icon">🤖</div>
+      <div class="funnel-text"><strong>Recebe resposta genérica</strong><br>Fria, sem direção, sem oferta</div>
+    </div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-step broken">
+      <div class="funnel-icon">❓</div>
+      <div class="funnel-text"><strong>Bombardeado de perguntas</strong><br>Antes de receber qualquer valor</div>
+    </div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-step broken">
+      <div class="funnel-icon">💸</div>
+      <div class="funnel-text"><strong>Pergunta o preço</strong><br>Recebe texto longo e mais perguntas</div>
+    </div>
+    <div class="funnel-arrow">↓</div>
+    <div class="funnel-step broken">
+      <div class="funnel-icon">🚪</div>
+      <div class="funnel-text"><strong>Cliente some em silêncio</strong><br>Nenhuma proposta foi feita</div>
+    </div>
+  </div>
+</section>
+
+<!-- O QUE ESTÁ FALTANDO -->
+<section>
+  <div class="section-header fade-in">
+    <span class="section-num">04 — Ausências</span>
+    <h2 class="section-title">O que nunca aparece nas conversas</h2>
+  </div>
+
+  <ul class="checklist fade-in">
+    <li>Proposta com preço claro e objetivo</li>
+    <li>Oferta concreta com nome, duração e valor</li>
+    <li>CTA direto pedindo confirmação ou reserva</li>
+    <li>Gatilho de urgência ou disponibilidade limitada</li>
+    <li>Criação de imagem mental da experiência</li>
+    <li>Diferenciais específicos da Anima Missões</li>
+    <li>Resumo da oferta no final da conversa</li>
+    <li>Follow-up com contexto e proposta real</li>
+    <li>Ancoragem de preço logo no início</li>
+    <li>Qualificação orgânica integrada à venda</li>
+  </ul>
+</section>
+
+<!-- DIAGNÓSTICO FINAL -->
+<section>
+  <div class="section-header fade-in">
+    <span class="section-num">05 — Diagnóstico</span>
+    <h2 class="section-title">O problema real</h2>
+  </div>
+
+  <div class="diagnosis-box fade-in">
+    <h3 class="diagnosis-title">
+      O problema não é <span>marketing</span>.<br>
+      O problema é conversão.
+    </h3>
+    <p class="diagnosis-text">
+      Você pode trazer mil leads com o melhor conteúdo do Instagram. Sem atendimento comercial funcional, eles viram "curiosos". O gargalo está na conversa — no momento em que o interesse do cliente bate de frente com um atendimento que informa mas não vende.
+    </p>
+    <p class="diagnosis-text">
+      Cada ponto desta análise tem uma correção técnica específica. Não é questão de personalidade ou esforço. É processo. Roteiro de atendimento. Sequência de oferta. CTA no momento certo.
+    </p>
+    <div class="diagnosis-final">
+      "Ele atende como informativo institucional, quando deveria atender como vendedor."
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>Análise por <strong>Binho da Anima Missões</strong> — Diagnóstico de Atendimento Comercial</p>
+  <p>São Miguel das Missões, RS — 2025</p>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, i * 60);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
